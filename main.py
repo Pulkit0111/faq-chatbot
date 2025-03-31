@@ -1,49 +1,40 @@
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_google_firestore import FirestoreChatMessageHistory
-from google.cloud import firestore
-from dotenv import load_dotenv
+from ai_engine import generate_response
+import streamlit as st
+import time
 
-load_dotenv()
+st.title("🤖 FAQ Chatbot")
+st.caption("I am your friendly AI assistant. Ask me anything!")
 
-# Firestore Configuration
-PROJECT_ID = "langchain-e21d8"
-SESSION_ID = "user_session_new"
-COLLECTION_NAME = "qna_bot_history"
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "Ask me anything! 👇"}]
 
-client = firestore.Client(project=PROJECT_ID)
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Initialize Firestore Chat Message History
-chat_history = FirestoreChatMessageHistory(
-    session_id=SESSION_ID,
-    collection=COLLECTION_NAME,
-    client=client,
-)
+# Accept user input
+if prompt := st.chat_input("What's up!"):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-print("Chat History Initialized")
-print("Current chat history: ", chat_history.messages)
-
-model = ChatOpenAI(model = "gpt-3.5-turbo")
-
-def generate_response(user_query):
-    
-    prompt_template = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant that can answer FAQs."),
-        ("human", "{user_query}"),
-    ])
-    
-    prompt = prompt_template.invoke({"user_query": user_query})
-    response = model.invoke(prompt)
-    return response.content
-
-while True:
-    user_query = input("You: ")
-    if user_query.lower() == "exit":
-        print("Exiting...")
-        break
-    chat_history.add_user_message(user_query) # Add user message to chat history
-    response = generate_response(user_query) # Generate response from model
-    chat_history.add_ai_message(response) # Add AI message to chat history
-    print("Bot: ", response)
-
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        with st.spinner("Let me think...."):
+            assistant_response = generate_response(prompt)
+        
+        full_response = ""
+        # Simulate stream of response with milliseconds delay
+        for chunk in assistant_response.split():
+            full_response += chunk + " "
+            time.sleep(0.05)
+            # Add a blinking cursor to simulate typing
+            message_placeholder.markdown(full_response + "▌")
+        message_placeholder.markdown(full_response)
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
