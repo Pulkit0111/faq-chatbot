@@ -2,7 +2,7 @@ from ai_engine import generate_response
 import streamlit as st
 import time
 
-st.title("🤖 FAQ Chatbot")
+st.title("🤖 AMA Chatbot")
 st.caption("I am your friendly AI assistant. Ask me anything!")
 
 # Initialize chat history
